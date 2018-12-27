@@ -5,6 +5,7 @@ tau = 0.1;
 cher = 2.5;
 
 filterErr = [];
+filterSecondMomentErr = [];
 medianErr = [];
 ransacErr = [];
 LRVErr = [];
@@ -17,6 +18,7 @@ for d = ds
     N = 10*floor(d/eps^2);
     fprintf('Training with dimension = %d, number of samples = %d \n', d, round(N, 0))
     sumFilterErr = 0;
+		sumFilterSecondMomentErr = 0;
     sumMedErr = 0;
     sumRansacErr = 0;
     sumLRVErr = 0;
@@ -24,8 +26,8 @@ for d = ds
     sumNoisySampErr = 0;
     sumPrunedErr = 0;
 
-		% Fix the covariance matrix
-		% =========================
+	% Fix the covariance matrix
+	% =========================
     % Identity matrices at different scales.
     C = eye(d);
     % C = 0.5 * eye(d);
@@ -94,9 +96,14 @@ for d = ds
     sumFilterErr = sumFilterErr + norm(filterGaussianMean(X, eps, tau, cher) - true_mean);
     fprintf('done\n')
 
+		fprintf('FilterSecondMoment...')
+		sumFilterSecondMomentErr = sumFilterSecondMomentErr + norm(filterSecondMomentMean(X) - true_mean);
+		fprintf('done\n')
+
     medianErr = [medianErr sumMedErr];
     ransacErr = [ransacErr sumRansacErr];
     filterErr = [filterErr sumFilterErr];
+		filterSecondMomentErr = [filterSecondMomentErr sumFilterSecondMomentErr];
     LRVErr = [LRVErr sumLRVErr];
     sampErr = [sampErr sumSampErr];
     noisySampErr = [noisySampErr sumNoisySampErr];
@@ -109,8 +116,9 @@ medianErr = medianErr - sampErr;
 ransacErr = ransacErr - sampErr;
 LRVErr = LRVErr - sampErr;
 filterErr = filterErr - sampErr;
+filterSecondMomentErr = filterSecondMomentErr - sampErr;
 
-plot(ds, noisySampErr, ds, prunedErr, ds, medianErr, '-ro', ds, ransacErr, ds, LRVErr, ds, filterErr, '-.b', 'LineWidth', 2)
+plot(ds, noisySampErr, ds, prunedErr, ds, medianErr, '-ro', ds, ransacErr, ds, LRVErr, ds, filterErr, '-.b', ds, filterSecondMomentErr, '-.k', 'LineWidth', 2)
 xlabel('Dimension')
 ylabel('Excess L2 error')
-legend('Sampling Error (with noise)', 'Naive Pruning', 'Geometric Median', 'RANSAC', 'LRV', 'Filter')
+legend('Sampling Error (with noise)', 'Naive Pruning', 'Geometric Median', 'RANSAC', 'LRV', 'Filter', 'FilterSecondMoment')
