@@ -24,41 +24,74 @@ for d = ds
     sumNoisySampErr = 0;
     sumPrunedErr = 0;
 
-    X =  mvnrnd(zeros(1,d), eye(d), round((1-eps)*N)) + ones(round((1-eps)*N), d);
+		% Fix the covariance matrix
+		% =========================
+    % Identity matrices at different scales.
+    C = eye(d);
+    % C = 0.5 * eye(d);
+    % C = 2 * eye(d);
+    
+    % Diagonal matrices at different scales.
+    % C = diag(rand(d,1));
+    % C = 2 * diag(rand(d,1));
+    
+    % Non-diagonal and random matrices at different scales.
+    % [Q, R] = qr(rand(d, d));
+    % C = Q * diag(rand(d,1)) * Q';
+    % C = Q * 2 * diag(rand(d,1)) * Q';
+    
+    % Tridiagonal matrices at different scales.
+    % h = [eps 1 eps];
+    % C = convmtx(h, d);
+    % C = C(:, 2:end-1);
+    % C = C(:,2:end-1) / (1 + eps*2);
+    
+    % Single Gaussian
+    % ---------------
+    X =  mvnrnd(zeros(1,d), C, round((1-eps)*N)) + ones(round((1-eps)*N), d);
+    true_mean = ones(1, d);
 
+    % Mixture of 2 Gaussians
+    % ----------------------
+    % G = gmdistribution([ones(1,d); (1 - (1.0 / sqrt(d))) * ones(1, d)], C);
+    % X = random(G, round((1-eps)*N));
+    % true_mean = (1 - (0.5 / sqrt(d))) * ones(1, d);
+    
     fprintf('Sampling Error w/o noise...');
-    sumSampErr = sumSampErr + norm(mean(X) - ones(1,d));
+    sumSampErr = sumSampErr + norm(mean(X) - true_mean);
     fprintf('done\n')
 
     Y1 = randi([0 1], round(0.5*eps*N), d); 
-    Y2 = [12*ones(round(0.5*eps*N),1), -2 * ones(round(0.5*eps*N), 1), zeros(round(0.5 * eps * N), d-2)];
+    Y2 = [12*randi([0 1], round(0.5*eps*N), 1),...
+          -2*randi([0 1], round(0.5*eps*N), 1),...
+          zeros(round(0.5*eps*N), d-2)];
     X = [X; Y1; Y2];
 
     fprintf('Sampling Error with noise...');
-    sumNoisySampErr = sumNoisySampErr + norm(mean(X) - ones(1,d));
+    sumNoisySampErr = sumNoisySampErr + norm(mean(X) - true_mean);
     fprintf('done\n')
     
     
     fprintf('Pruning...');
     [prunedMean, ~] = pruneGaussianMean(X, eps);
-    sumPrunedErr = sumPrunedErr + norm(prunedMean - ones(1, d));
+    sumPrunedErr = sumPrunedErr + norm(prunedMean - true_mean);
     fprintf('done\n')
     
     fprintf('Median...')
     gm = geoMedianGaussianMean(X);
-    sumMedErr = sumMedErr + norm(gm - ones(1, d));
+    sumMedErr = sumMedErr + norm(gm - true_mean);
     fprintf('done\n')
     
     fprintf('Ransac...')
-    sumRansacErr = sumRansacErr + norm(ransacGaussianMean(X, eps, tau) - ones(1, d));
+    sumRansacErr = sumRansacErr + norm(ransacGaussianMean(X, eps, tau) - true_mean);
     fprintf('done\n')
 
     fprintf('LRV...')
-    sumLRVErr = sumLRVErr + norm(agnosticMeanGeneral(X, eps) - ones(1,d));
+    sumLRVErr = sumLRVErr + norm(agnosticMeanGeneral(X, eps) - true_mean);
     fprintf('done\n')
 
     fprintf('Filter...')
-    sumFilterErr = sumFilterErr + norm(filterGaussianMean(X, eps, tau, cher) - ones(1, d));
+    sumFilterErr = sumFilterErr + norm(filterGaussianMean(X, eps, tau, cher) - true_mean);
     fprintf('done\n')
 
     medianErr = [medianErr sumMedErr];
